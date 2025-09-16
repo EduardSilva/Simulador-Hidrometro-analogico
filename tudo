@@ -1,0 +1,827 @@
+// CRONOMETRO.HPP
+
+#ifndef CRONOMETRO_H
+#define CRONOMETRO_H
+
+#include "Icomando.hpp"
+#include <thread> 
+#include <chrono>
+#include <atomic>
+
+class cronometro{
+    private:
+        Icomando * cmd;
+        int intervalo_ms;
+        double scala_simulador;
+        std::thread worker_thread;
+        std::atomic<bool> ativo;
+
+        void loop();
+
+    public:
+        cronometro(Icomando* cmd, int intervalo, double scala);
+        void iniciar();
+        void parar();
+        ~cronometro();
+
+
+};
+
+
+
+#endif
+
+//cronometro.cpp
+#include "cronometro.hpp"
+
+cronometro::cronometro(Icomando* cmd, int intervalo_em_ms, double escala)
+    : cmd(cmd),
+      intervalo_ms(intervalo_em_ms),
+      scala_simulador(escala),
+      ativo(false) // O cronômetro começa desligado.
+{}
+
+
+cronometro::~cronometro() {
+    parar();
+}
+/// @brief inicia o funcionamento do cronometro
+void cronometro::iniciar() {
+    if (ativo) return; // Se já estiver ativo, não faz nada.
+
+    ativo = true;
+    worker_thread = std::thread(&cronometro::loop, this);
+}
+
+/// @brief Para a execução em segundo plano de forma segura
+void cronometro::parar() {
+    ativo = false; 
+    if (worker_thread.joinable()) {
+        worker_thread.join();
+    }
+}
+
+/// @brief função responsável por executar o Icomando de x em x ficando em sleep durante o periodo inativo
+void cronometro::loop() {
+
+    double intervalo_sec = static_cast<double>(intervalo_ms) / 1000.0;
+
+
+    while (this->ativo) {
+
+        if (this->cmd) {
+
+            cmd->executar(intervalo_sec, scala_simulador);
+        }
+
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(intervalo_ms));
+    }
+}
+//defs
+
+#ifndef DEFS_H
+#define DEFS_H
+
+// defs.hpp - VERSÃO CORRIGIDA COM VALORES PADRÃO
+
+struct configuracoes_t {
+    double vazao_entrada    = 0.0;
+    double diametro_entrada = 0.075; 
+    double ar_entrada       = 0.0;
+    double vazao_saida      = 0.0;
+    double diametro_saida   = 0.075; //75mm
+    double ar_saida         = 0.0;
+    double tempo            = 100; //100 sec
+    double scale            = 1; 
+};
+
+
+#endif
+
+//fabrica.hpp
+
+#ifndef FABRICA_H
+#define FABRICA_H
+
+#include "IprovedorConfig.hpp"
+#include "simuladorHidrometro.hpp"
+class fabrica{
+    public:
+        static simuladorHidrometro * criar_simulador(const IprovedorConfig& prov);
+
+};
+
+
+
+#endif
+
+//fabrica.cpp
+#include "fabrica.hpp"
+
+
+
+simuladorHidrometro * fabrica::criar_simulador(const IprovedorConfig& prov){
+    configuracoes_t conf = prov.enviar_configuracoes();
+
+    tubo * te = new tubo(conf.diametro_entrada, conf.vazao_entrada, conf.ar_entrada);
+    tubo * ts = new tubo(conf.diametro_saida, conf.vazao_saida, conf.ar_saida);
+
+    simuladorHidrometro * sim = new simuladorHidrometro(te, ts);
+
+    return sim;
+}
+
+//gerador_imagem.hpp
+
+#ifndef GERADOR_IMAGEM_PNG_HPP
+#define GERADOR_IMAGEM_PNG_HPP
+
+#include "simuladorHidrometro.hpp"
+#include <string>
+#include <vector>
+#include <iostream>
+#include <stdexcept>
+
+struct Cor { unsigned char r, g, b; };
+
+class GeradorImagemPNG {
+private:
+    const int largura;
+    const int altura;
+    const int canais = 3;
+    std::vector<unsigned char> buffer_pixels;
+
+    // --- Funções auxiliares de desenho (privadas) ---
+    void desenhar_pixel(int x, int y, Cor cor);
+    void desenhar_retangulo(int x, int y, int w, int h, Cor cor);
+    void desenhar_circulo_preenchido(int centro_x, int centro_y, int raio, Cor cor_fundo_externo, Cor cor_circulo);
+    void desenhar_digito(int digito, int x_offset, int y_offset, int escala, Cor cor);
+    void desenhar_texto(const std::string& texto, int x_start, int y_start, int escala, Cor cor);
+    void desenhar_imagem(int x_offset, int y_offset, const std::string& caminho_imagem);
+    void desenhar_linha(int x0, int y0, int x1, int y1, int espessura, Cor cor); // --- MUDANÇA ---
+
+public:
+    explicit GeradorImagemPNG(int largura_img, int altura_img);
+    void gerar(const simuladorHidrometro& sim, const std::string& nome_arquivo);
+};
+
+#endif // GERADOR_IMAGEM_PNG_HPP
+
+//gerador_imagem.cpp
+
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "stb_image_write.h"
+
+#include "GeradorImagemPNG.hpp"
+#include <cmath>
+#include <string>
+#include <algorithm>
+#include <iomanip>
+#include <sstream>
+#include <vector>
+#include <filesystem>
+
+// --- Definição da Fonte Bitmap 5x7 ---
+const int DIGITO_LARGURA = 5; const int DIGITO_ALTURA = 7;
+const bool FONT_MAP[10][DIGITO_ALTURA][DIGITO_LARGURA] = {
+    {{1,1,1,1,1},{1,0,0,0,1},{1,0,0,0,1},{1,0,0,0,1},{1,0,0,0,1},{1,0,0,0,1},{1,1,1,1,1}}, // 0
+    {{0,0,1,0,0},{0,1,1,0,0},{0,0,1,0,0},{0,0,1,0,0},{0,0,1,0,0},{0,0,1,0,0},{0,1,1,1,0}}, // 1
+    {{1,1,1,1,1},{0,0,0,0,1},{0,0,0,0,1},{1,1,1,1,1},{1,0,0,0,0},{1,0,0,0,0},{1,1,1,1,1}}, // 2
+    {{1,1,1,1,1},{0,0,0,0,1},{0,0,0,0,1},{1,1,1,1,1},{0,0,0,0,1},{0,0,0,0,1},{1,1,1,1,1}}, // 3
+    {{1,0,0,0,1},{1,0,0,0,1},{1,0,0,0,1},{1,1,1,1,1},{0,0,0,0,1},{0,0,0,0,1},{0,0,0,0,1}}, // 4
+    {{1,1,1,1,1},{1,0,0,0,0},{1,0,0,0,0},{1,1,1,1,1},{0,0,0,0,1},{0,0,0,0,1},{1,1,1,1,1}}, // 5
+    {{1,1,1,1,1},{1,0,0,0,0},{1,0,0,0,0},{1,1,1,1,1},{1,0,0,0,1},{1,0,0,0,1},{1,1,1,1,1}}, // 6
+    {{1,1,1,1,1},{0,0,0,0,1},{0,0,0,0,1},{0,0,0,0,1},{0,0,0,0,1},{0,0,0,0,1},{0,0,0,0,1}}, // 7
+    {{1,1,1,1,1},{1,0,0,0,1},{1,0,0,0,1},{1,1,1,1,1},{1,0,0,0,1},{1,0,0,0,1},{1,1,1,1,1}}, // 8
+    {{1,1,1,1,1},{1,0,0,0,1},{1,0,0,0,1},{1,1,1,1,1},{0,0,0,0,1},{0,0,0,0,1},{1,1,1,1,1}}  // 9
+};
+
+GeradorImagemPNG::GeradorImagemPNG(int largura_img, int altura_img) : largura(largura_img), altura(altura_img), buffer_pixels(largura_img * altura_img * canais) {}
+void GeradorImagemPNG::desenhar_pixel(int x, int y, Cor cor) { if (x < 0 || x >= largura || y < 0 || y >= altura) return; int index = (y * largura + x) * canais; buffer_pixels[index] = cor.r; buffer_pixels[index + 1] = cor.g; buffer_pixels[index + 2] = cor.b; }
+void GeradorImagemPNG::desenhar_circulo_preenchido(int cx, int cy, int r, Cor c_fundo, Cor c_circ) { for (int y = cy - r - 1; y < cy + r + 1; y++) { for (int x = cx - r - 1; x < cx + r + 1; x++) { double d = std::sqrt(std::pow(x - cx, 2) + std::pow(y - cy, 2)); if (d <= r + 0.5) { double s = std::clamp(r + 0.5 - d, 0.0, 1.0); unsigned char R = s*c_circ.r+(1-s)*c_fundo.r, G = s*c_circ.g+(1-s)*c_fundo.g, B = s*c_circ.b+(1-s)*c_fundo.b; desenhar_pixel(x,y,{R,G,B}); } } } }
+void GeradorImagemPNG::desenhar_retangulo(int x, int y, int w, int h, Cor cor) { for (int j = y; j < y + h; ++j) for (int i = x; i < x + w; ++i) desenhar_pixel(i, j, cor); }
+void GeradorImagemPNG::desenhar_digito(int d, int xo, int yo, int s, Cor c) { if (d < 0 || d > 9) return; for (int y = 0; y < DIGITO_ALTURA; ++y) for (int x = 0; x < DIGITO_LARGURA; ++x) if (FONT_MAP[d][y][x]) desenhar_retangulo(xo+x*s, yo+y*s, s, s, c); }
+void GeradorImagemPNG::desenhar_texto(const std::string& t, int xs, int ys, int s, Cor c) { for (size_t i = 0; i < t.length(); ++i) if (t[i] >= '0' && t[i] <= '9') desenhar_digito(t[i]-'0', xs+i*(DIGITO_LARGURA*s+s*2), ys, s, c); }
+void GeradorImagemPNG::desenhar_linha(int x0, int y0, int x1, int y1, int esp, Cor c) { for (int i = -esp/2; i <= esp/2; ++i) for (int j = -esp/2; j <= esp/2; ++j) { int dx = abs(x1 - x0), sx = x0 < x1 ? 1 : -1; int dy = -abs(y1 - y0), sy = y0 < y1 ? 1 : -1; int err = dx + dy, e2; int curX = x0+i, curY = y0+j; while(true) { desenhar_pixel(curX, curY, c); if (curX == (x1+i) && curY == (y1+j)) break; e2 = 2*err; if (e2 >= dy) { err += dy; curX += sx; } if (e2 <= dx) { err += dx; curY += sy; } } } }
+// Função para carregar imagem foi removida pois não é mais necessária.
+
+void GeradorImagemPNG::gerar(const simuladorHidrometro& sim, const std::string& nome_arquivo) {
+    // --- CORES e Constantes ---
+    const Cor PRETO = {30, 30, 30};
+    const Cor CINZA_FUNDO_EXTERNO = {220, 220, 220};
+    const Cor CINZA_MIOLO = {245, 245, 245};
+    const Cor CINZA_BORDA = {80, 80, 80};
+    const Cor CINZA_DISPLAY = {50, 50, 50};
+    const Cor BRANCO_TEXTO = {240, 240, 240};
+    const Cor VERMELHO_TEXTO = {220, 50, 50};
+    
+    int centro_x = largura / 2;
+    int centro_y = altura / 2;
+
+    std::fill(buffer_pixels.begin(), buffer_pixels.end(), 220);
+
+    // 1. Desenha o miolo circular
+    desenhar_circulo_preenchido(centro_x, centro_y, 195, CINZA_FUNDO_EXTERNO, CINZA_BORDA);
+    desenhar_circulo_preenchido(centro_x, centro_y, 185, CINZA_BORDA, CINZA_MIOLO);
+
+    // --- MUDANÇA --- Lógica de desenho do odômetro com janelas individuais ---
+    
+    // Pega todos os valores de uma vez
+    long long consumo_m3 = static_cast<long long>(sim.get_consumo_total_m3());
+    int centena_l = sim.get_consumo_centena_litro();
+    int dezena_l = sim.get_consumo_dezena_litro();
+    int litro_l = sim.get_consumo_litro(); 
+
+    // Formata os números como strings
+    std::stringstream ss_m3, ss_litros;
+    ss_m3 << std::setfill('0') << std::setw(4) << (consumo_m3 % 10000);
+    ss_litros << centena_l << dezena_l; // Os 2 dígitos vermelhos
+    
+    std::string m3_str = ss_m3.str();
+    std::string litros_str = ss_litros.str();
+
+    // Constantes de layout para o odômetro
+    int escala_fonte = 4;
+    int digito_w = DIGITO_LARGURA * escala_fonte;
+    int digito_h = DIGITO_ALTURA * escala_fonte;
+    int espacamento = 8;
+    int janela_w = digito_w + 4;
+    int janela_h = digito_h + 4;
+    int y_display = 130;
+    
+    // Calcula a largura total para centralizar
+    int total_w_m3 = 4 * (janela_w + espacamento);
+    int total_w_litros = 2 * (janela_w + espacamento);
+    int total_odometro_w = total_w_m3 + total_w_litros;
+    int x_inicial = centro_x - total_odometro_w / 2;
+
+    // Desenha as janelas e os dígitos para m³ (pretos)
+    for (int i = 0; i < 4; ++i) {
+        int x_pos = x_inicial + i * (janela_w + espacamento);
+        desenhar_retangulo(x_pos, y_display, janela_w, janela_h, CINZA_DISPLAY);
+        desenhar_texto(std::string(1, m3_str[i]), x_pos + 2, y_display + 2, escala_fonte, BRANCO_TEXTO);
+    }
+    
+    // Desenha a vírgula separadora
+    desenhar_retangulo(x_inicial + total_w_m3 - espacamento/2, y_display + janela_h - 10, 6, 6, BRANCO_TEXTO);
+
+    // Desenha as janelas e os dígitos para litros (vermelhos)
+    for (int i = 0; i < 2; ++i) {
+        int x_pos = x_inicial + total_w_m3 + i * (janela_w + espacamento);
+        desenhar_retangulo(x_pos, y_display, janela_w, janela_h, CINZA_DISPLAY);
+        desenhar_texto(std::string(1, litros_str[i]), x_pos + 2, y_display + 2, escala_fonte, VERMELHO_TEXTO);
+    }
+    
+    // Adiciona a etiqueta "m³" ao final
+    desenhar_texto("m3", x_inicial + total_odometro_w + 5, y_display + 10, 2, PRETO);
+
+    // Desenha o relógio analógico de litros
+    int relogio_cx = centro_x;
+    int relogio_cy = 260;
+    int relogio_r = 60;
+    for (int i = 0; i < 10; ++i) {
+        double ang = (i * 36 - 90) * (M_PI / 180.0);
+        int nx = relogio_cx + (relogio_r - 12) * cos(ang) - (DIGITO_LARGURA);
+        int ny = relogio_cy + (relogio_r - 12) * sin(ang) - (DIGITO_ALTURA);
+        desenhar_texto(std::to_string(i), nx, ny, 2, PRETO);
+    }
+    double ang_ponteiro = (litro_l * 36 - 90) * (M_PI / 180.0);
+    int px = relogio_cx + (relogio_r - 8) * cos(ang_ponteiro);
+    int py = relogio_cy + (relogio_r - 8) * sin(ang_ponteiro);
+    desenhar_linha(relogio_cx, relogio_cy, px, py, 3, VERMELHO_TEXTO);
+    desenhar_circulo_preenchido(relogio_cx, relogio_cy, 5, VERMELHO_TEXTO, VERMELHO_TEXTO);
+    
+    // --- REMOVIDO --- A chamada para desenhar o logo do INMETRO foi removida.
+    
+    stbi_write_png(nome_arquivo.c_str(), largura, altura, canais, buffer_pixels.data(), largura * canais);
+}
+
+
+//icomando
+#ifndef ICOMANDO_H
+#define ICOMANDO_H
+
+#include "simuladorHidrometro.hpp"
+#include "fabrica.hpp"
+#include "IprovedorConfig.hpp"
+#include "GeradorImagemPNG.hpp"
+#include <mutex>
+
+class Icomando{
+    public:
+    virtual ~Icomando() = default;
+
+    virtual void executar(double sec, double scale) = 0;
+
+};
+
+class controladora : public Icomando{
+    private:
+        simuladorHidrometro * sim;
+        GeradorImagemPNG *ger_imagem;
+        std::mutex* m_mutex;
+    public:
+    controladora(const IprovedorConfig & prov, GeradorImagemPNG * gerador_png, std::mutex* mutex);
+    ~controladora();
+    void gerar_imagem();
+    void executar(double sec, double scale) override;
+    void criar_simulador(const IprovedorConfig & prov);
+};
+
+#endif
+
+//icomando.cpp
+#include "Icomando.hpp"
+#include <iostream>
+#include <iomanip>
+/// @brief Cria um simulador usando a classe fabrica e 
+/// @param prov um provedor deconfigurações, cujo será usado para receber as configurações do simulador
+void controladora::criar_simulador(const IprovedorConfig & prov){
+    this->sim = fabrica::criar_simulador(prov);
+};
+
+void controladora::executar(double sec, double scale) {
+    this->sim->atualizar_info(sec, scale);
+    this->gerar_imagem();
+}
+void imprimir_status(const simuladorHidrometro& sim) {
+    std::cout << std::fixed << std::setprecision(4); // Formata para 4 casas decimais
+    std::cout << "  Consumo Total Acumulado: " << sim.get_consumo_total_m3() << " m3\n";
+    std::cout << "  Ponteiro Centenas de Litros: " << sim.get_consumo_centena_litro() << "\n";
+    std::cout << "  Ponteiro Dezenas de Litros:  " << sim.get_consumo_dezena_litro() << "\n";
+    std::cout << "  Ponteiro de Litros:  " << sim.get_consumo_litro() << "\n\n";
+}
+
+void controladora::gerar_imagem(){
+    std::lock_guard<std::mutex> lock(*m_mutex);
+    imprimir_status(*this->sim);
+    this->ger_imagem->gerar(*this->sim, "imagem.png");
+}
+
+controladora::~controladora(){
+    delete this->sim;
+}
+controladora::controladora(const IprovedorConfig & prov, GeradorImagemPNG * gerador_png, std::mutex* mutex){
+    this->criar_simulador(prov);
+    this->ger_imagem =  gerador_png;
+    this->m_mutex = mutex;
+}
+
+//iprovedor.hpp
+
+#ifndef IPROVCONF_H
+#define IPROVCONF_H
+#include "defs.hpp"
+#include <string>
+#include <fstream>
+
+
+class IprovedorConfig{
+    public:
+        virtual configuracoes_t enviar_configuracoes() const = 0;
+        virtual void  montar_configuracoes() = 0;
+        virtual ~IprovedorConfig() = default;
+
+};
+
+class provedorConfigArquivo : public IprovedorConfig{
+    private:
+        configuracoes_t configuracoes;
+        std::string file_name;
+        std::ifstream file;
+    public:
+        provedorConfigArquivo(const std::string & name);
+        virtual configuracoes_t enviar_configuracoes() const override;
+        virtual void  montar_configuracoes() override;
+
+};
+
+
+
+#endif
+
+//iprovedor.cpp
+
+#include "IprovedorConfig.hpp"
+#include <iostream>
+#include <map>
+#include <stdexcept>
+namespace {
+
+    enum class campos  {
+        VAZAO_ENTRADA,
+        DIAMETRO_ENTRADA,
+        AR_ENTRADA,
+        VAZAO_SAIDA,
+        DIAMETRO_SAIDA,
+        AR_SAIDA,
+        TEMPO,
+        SCALE
+    };
+
+    campos string_to_enum (const std::string & s){
+        static const std::map<std::string, campos> string_to_campo{
+        {"vazao_entrada", campos::VAZAO_ENTRADA},
+        {"diametro_entrada", campos::DIAMETRO_ENTRADA},
+        {"ar_entrada", campos::AR_ENTRADA},
+        {"vazao_saida",      campos::VAZAO_SAIDA},
+        {"diametro_saida",   campos::DIAMETRO_SAIDA},
+        {"ar_saida",         campos::AR_SAIDA},
+        {"tempo",            campos::TEMPO},
+        {"scale",            campos::SCALE}
+        };
+        //faz a busca no map acima pelo parametro procurado.
+        std::map<std::string, campos>::const_iterator it = string_to_campo.find(s);
+        if(it != string_to_campo.end()){
+            return it->second;
+        }
+        else {
+            throw std::invalid_argument("Parametro desconhecido :" + s);
+        }
+    };
+};
+
+
+
+provedorConfigArquivo::provedorConfigArquivo(const std::string & name)    : file_name(name), file(name) // Inicializa o ifstream com o arquivo.
+{
+    if (!file.is_open()) {
+        std::cerr << "Erro: Nao foi possivel abrir o arquivo de configuracao: " << file_name << std::endl;
+    } else {
+        // Já que abrimos o arquivo, podemos montar as configs aqui mesmo.
+        montar_configuracoes();
+        this->file.close();
+    }
+}
+/// @brief monta as configurações de acordo com o arquivo que recebeu.
+void provedorConfigArquivo::montar_configuracoes(){
+    //pra chegar aqui o arquivo já deve estar aberto.
+    std::string linha;
+    int nlinha = 1;
+    while (std::getline(file,linha)){
+        if(linha.empty() || (linha[0] == '#')){ //skip caso esteja vazia ou comentario.
+            nlinha++;
+            continue;
+        }
+        size_t equal_pos = linha.find('=');
+        if(equal_pos == std::string::npos){
+            std::cerr << "Linha nº:" << nlinha << " sem '='" << std::endl;
+            nlinha++;
+            continue; //skipa linha mal formada, mandando aviso
+        }
+        try{
+            switch (string_to_enum(linha.substr(0, equal_pos))){
+                case campos::VAZAO_ENTRADA:
+                    this->configuracoes.vazao_entrada = std::stod(linha.substr(equal_pos+1));
+                break;
+                case campos::DIAMETRO_ENTRADA:
+                    this->configuracoes.diametro_entrada = std::stod(linha.substr(equal_pos+1));
+                break;
+                case campos::AR_ENTRADA:
+                    this->configuracoes.ar_entrada = std::stod(linha.substr(equal_pos+1));
+                break;
+                case campos::VAZAO_SAIDA:
+                    this->configuracoes.vazao_saida = std::stod(linha.substr(equal_pos+1));
+                break;
+                case campos::DIAMETRO_SAIDA:
+                    this->configuracoes.diametro_saida = std::stod(linha.substr(equal_pos+1));
+                break;
+                case campos::AR_SAIDA:
+                    this->configuracoes.ar_saida = std::stod(linha.substr(equal_pos+1));
+                break;
+                case campos::TEMPO:
+                    this->configuracoes.tempo = std::stod(linha.substr(equal_pos+1));
+                break;
+                case campos::SCALE:
+                    this->configuracoes.scale = std::stod(linha.substr(equal_pos+1));
+                break;
+            
+                default:
+                break;
+            }
+        }
+        catch(const std::exception& e){
+            std::cerr << "Erro ao processar linha " << nlinha << ": " << e.what() << std::endl;
+        }
+        nlinha++;
+    }
+    
+}
+
+/// @brief retorna as configurações obtidas do arquivo ou seus valores padrões
+/// @return retorna um configuracoes_t
+configuracoes_t provedorConfigArquivo::enviar_configuracoes() const {
+    return this->configuracoes;
+}
+//sha.hpp
+#ifndef SHA_HPP
+#define SHA_HPP
+
+#include "IprovedorConfig.hpp"
+#include "GeradorImagemPNG.hpp"
+#include "Icomando.hpp"
+#include "cronometro.hpp"
+#include "tela.hpp"
+#include <string>
+#include <memory>
+#include <mutex>
+
+class SHA {
+private:
+    // A classe SHA é "dona" de todos os componentes principais.
+    std::unique_ptr<IprovedorConfig> m_provedor;
+    std::unique_ptr<GeradorImagemPNG> m_gerador_imagem;
+    std::unique_ptr<controladora> m_controladora;
+    std::unique_ptr<cronometro> m_cronometro;
+    std::unique_ptr<Tela> m_tela;
+    
+    std::mutex m_mutex;
+
+public:
+
+    explicit SHA(const std::string& caminho_config);
+    ~SHA();
+
+    // Proíbe cópias para garantir que só existe uma instância da aplicação.
+    SHA(const SHA&) = delete;
+    SHA& operator=(const SHA&) = delete;
+
+    void run();
+};
+
+#endif // SHA_HPP
+
+//sha.cpp
+
+#include "SHA.hpp"
+#include <iostream>
+
+SHA::SHA(const std::string& caminho_config) {
+    std::cout << "Inicializando a Aplicacao SHA...\n";
+
+    m_provedor = std::make_unique<provedorConfigArquivo>(caminho_config);
+    m_gerador_imagem = std::make_unique<GeradorImagemPNG>(400, 400);
+    
+     configuracoes_t configs = m_provedor->enviar_configuracoes();
+
+    m_controladora = std::make_unique<controladora>(*m_provedor, m_gerador_imagem.get(), &m_mutex);
+    
+    m_cronometro = std::make_unique<cronometro>(m_controladora.get(), configs.tempo, configs.scale);
+
+    m_controladora->gerar_imagem();
+
+    const std::string NOME_FICHEIRO_FRAME = "imagem.png";
+    m_tela = std::make_unique<Tela>(400, 400, "Simulador de Hidrometro (SHA)", NOME_FICHEIRO_FRAME, &m_mutex);
+}
+
+SHA::~SHA() {
+    std::cout << "Aplicacao SHA encerrada. Recursos liberados.\n";
+}
+
+void SHA::run() {
+    if (!m_cronometro || !m_tela) {
+        std::cerr << "ERRO FATAL: Falha na inicializacao dos componentes da aplicacao.\n";
+        return;
+    }
+
+    std::cout << "Iniciando a simulacao em segundo plano...\n";
+    m_cronometro->iniciar();
+    
+    std::cout << "Iniciando a interface grafica...\n";
+    m_tela->executar();
+
+    std::cout << "Parando a simulacao em segundo plano...\n";
+    m_cronometro->parar();
+}
+
+
+//simuladorhidrometro.hpp
+#ifndef SIMULADORHIDROMETRO_H
+#define SIMULADORHIDROMETRO_H
+
+#include "tubo.hpp"
+
+class simuladorHidrometro
+{
+private:
+    double consumo_m3;
+    int consumo_centena_l;
+    int consumo_dezena_l;
+    int consumo_litro;
+    tubo * tubo_entrada;
+    tubo * tubo_saida;
+
+public:
+    simuladorHidrometro(tubo * t_entrada, tubo * t_saida);
+    ~simuladorHidrometro();
+
+    void atualizar_info(double sec, double scale);
+
+    double get_consumo_total_m3() const;
+    int get_consumo_centena_litro() const;
+    int get_consumo_dezena_litro() const;
+    int get_consumo_litro() const;
+    double get_real_consumo() const;
+};
+
+
+#endif
+
+//simaladorhidrometro.cpp
+
+#include "simuladorHidrometro.hpp"
+#include <algorithm>
+#include <cmath>
+
+simuladorHidrometro::simuladorHidrometro(tubo * t_entrada, tubo * t_saida){
+    this->tubo_entrada = t_entrada;
+    this->tubo_saida = t_saida;
+    this->consumo_centena_l = 0;
+    this->consumo_dezena_l = 0;
+    this->consumo_m3 = 0;
+}
+
+simuladorHidrometro::~simuladorHidrometro(){
+    delete this->tubo_entrada;
+    delete this->tubo_saida;
+}
+
+/// @brief calcula menor consumo entre os tubos de entrada e saida
+/// @return um double com o menor consumo entre os tubos.
+double simuladorHidrometro::get_real_consumo() const {
+    return std::min(this->tubo_entrada->consumo_em_dlitros(), this->tubo_saida->consumo_em_dlitros()); 
+}
+
+
+/**
+ * @brief Atualiza o estado do hidrômetro com base no tempo passado.
+ * @param sec O tempo base em segundos que passou desde a última chamada.
+ * @param scale Um fator de escala para acelerar/desacelerar a simulação.
+ */
+void simuladorHidrometro::atualizar_info(double sec, double scale) {
+
+    double tempo_efetivo_segundos = sec * scale;
+
+    double taxa_consumo_dezenas_litros_por_s = this->get_real_consumo();
+
+    double consumo_neste_tick_dezenas_litros = taxa_consumo_dezenas_litros_por_s * tempo_efetivo_segundos;
+
+    double consumo_neste_tick_m3 = consumo_neste_tick_dezenas_litros / 100.0;
+    this->consumo_m3 += consumo_neste_tick_m3;
+
+    long long total_litros = static_cast<long long>(std::floor(this->consumo_m3 * 1000.0));
+
+    this->consumo_dezena_l = (total_litros / 10) % 10;
+
+    this->consumo_centena_l = (total_litros / 100) % 10;
+    this->consumo_litro = total_litros  % 10;
+}
+
+
+double simuladorHidrometro::get_consumo_total_m3() const {
+    return this->consumo_m3;
+}
+int simuladorHidrometro::get_consumo_litro() const{
+    return this->consumo_litro;
+}
+
+int simuladorHidrometro::get_consumo_dezena_litro() const {
+    return this->consumo_dezena_l;
+}
+
+int simuladorHidrometro::get_consumo_centena_litro() const {
+    return this->consumo_centena_l;
+}
+
+//tela.hpp
+#ifndef TELA_HPP
+#define TELA_HPP
+
+#include <string>
+#include <SFML/Graphics.hpp>
+#include <mutex>
+#include <memory> 
+
+class Tela {
+private:
+    sf::RenderWindow m_janela;
+    sf::Texture m_textura;
+    std::unique_ptr<sf::Sprite> m_sprite; 
+    std::string m_caminho_imagem;
+    std::mutex* m_mutex;
+
+    void processarEventos();
+    void renderizar();
+
+public:
+    Tela(unsigned int largura, unsigned int altura, const std::string& titulo, const std::string& caminho_imagem, std::mutex* mutex);
+    void executar();
+};
+
+#endif
+//tela.cpp
+#include "tela.hpp"
+#include <iostream>
+
+Tela::Tela(unsigned int largura, unsigned int altura, const std::string& titulo, const std::string& caminho_imagem, std::mutex* mutex)
+    : m_janela(sf::VideoMode({largura, altura}), titulo),
+      m_caminho_imagem(caminho_imagem),
+      m_mutex(mutex)
+{
+    m_janela.setFramerateLimit(60);
+
+    // 1. Trava o mutex para garantir a leitura segura do ficheiro inicial.
+    std::lock_guard<std::mutex> lock(*m_mutex);
+    
+    // 2. Carrega a textura. O 'main' já garantiu que o ficheiro existe.
+    if (!m_textura.loadFromFile(m_caminho_imagem)) {
+        std::cerr << "ERRO FATAL: Nao foi possivel carregar o frame inicial da imagem '" << m_caminho_imagem << "'.\n";
+    }
+
+    // 3. AGORA, com a textura carregada, criamos o sprite.
+    m_sprite = std::make_unique<sf::Sprite>(m_textura);
+}
+
+void Tela::executar() {
+    while (m_janela.isOpen()) {
+        processarEventos();
+        renderizar();
+    }
+}
+
+void Tela::processarEventos() {
+    while (const auto event = m_janela.pollEvent()) {
+        if (event->is<sf::Event::Closed>()) {
+            m_janela.close();
+        }
+    }
+}
+
+void Tela::renderizar() {
+    if (!m_mutex || !m_sprite) return;
+
+    // Trava o mutex para proteger a leitura do ficheiro
+    {
+        std::lock_guard<std::mutex> lock(*m_mutex);
+        m_textura.loadFromFile(m_caminho_imagem); 
+    }
+    
+    m_janela.clear(sf::Color(220, 220, 220));
+    m_janela.draw(*m_sprite); 
+    m_janela.display();
+}
+//tubo.hpp
+#ifndef TUBO_H
+#define TUBO_H
+
+class tubo {
+    private:
+
+        double diametro;
+        double vazao_agua;
+        double vazao_ar;
+
+    public:
+        /// @brief cria um tubo,-,)
+        /// @param diametro_inicial 
+        /// @param vazao_agua_inicial 
+        /// @param vazao_ar_inicial 
+        explicit tubo(double diametro_inicial, double vazao_agua_inicial, double vazao_ar_inicial) : 
+            diametro(diametro_inicial), 
+            vazao_agua(vazao_agua_inicial), 
+            vazao_ar(vazao_ar_inicial){
+
+        }
+
+        double consumo_em_dlitros() const;
+
+};
+
+#endif
+
+//tela.cpp
+#include "tubo.hpp"
+#include <cmath>
+
+/**
+ * @brief Calcula o consumo total em DEZENAS DE LITROS, para um intervalo de 1 segundo.
+ * @return double O volume total em dezenas de litros.
+ */
+double tubo::consumo_em_dlitros() const {
+
+    double vazao_total = this->vazao_agua + this->vazao_ar;
+
+    double raio = this->diametro / 2.0;
+    double area_tubo = M_PI * std::pow(raio, 2);
+
+
+    double vazao_m3_por_segundo = area_tubo * vazao_total;
+    
+
+    double volume_em_litros = vazao_m3_por_segundo * 1000.0;
+
+    return volume_em_litros / 10.0;
+}

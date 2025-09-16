@@ -1,0 +1,12 @@
+# Arquivo de teste de configuração para o simulador
+
+vazao_entrada=2.0
+diametro_entrada=0.025
+
+ar_entrada=1.5
+
+vazao_saida=2.0
+diametro_saida=0.025
+
+tempo=2500
+scale=10

@@ -1,0 +1,41 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "type": "cppbuild",
+            "label": "C/C++: g++ build project",
+            "command": "/usr/bin/g++",
+            "args": [
+                "-fdiagnostics-color=always",
+                "-g",
+                "-std=c++17", // <--- VERSÃO DO C++ EXPLICITADA AQUI
+                "${workspaceFolder}/main.cpp",
+                "${workspaceFolder}/src/IprovedorConfig.cpp",
+                "${workspaceFolder}/src/tubo.cpp",
+                "${workspaceFolder}/src/tela.cpp",
+                "${workspaceFolder}/src/Icomando.cpp",
+                "${workspaceFolder}/src/fabrica.cpp",
+                "${workspaceFolder}/src/GeradorImagemPNG.cpp",
+                "${workspaceFolder}/src/cronometro.cpp",
+                "${workspaceFolder}/src/SHA.cpp",
+                "${workspaceFolder}/src/simuladorHidrometro.cpp",
+                "-o",
+                "${workspaceFolder}/meu_programa",
+                "-lsfml-graphics",
+                "-lsfml-window",
+                "-lsfml-system"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "detail": "Compiles the entire project for debugging using C++20 standard."
+        }
+    ]
+}
