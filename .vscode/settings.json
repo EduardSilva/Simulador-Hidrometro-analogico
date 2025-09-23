@@ -73,6 +73,11 @@
         "thread": "cpp",
         "cinttypes": "cpp",
         "typeinfo": "cpp",
-        "variant": "cpp"
+        "variant": "cpp",
+        "queue": "cpp",
+        "ranges": "cpp",
+        "stack": "cpp",
+        "cfenv": "cpp",
+        "tudo": "cpp"
     }
 }

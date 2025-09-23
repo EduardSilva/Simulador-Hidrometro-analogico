@@ -23,6 +23,7 @@ SHA::~SHA() {
     std::cout << "Aplicacao SHA encerrada. Recursos liberados.\n";
 }
 
+/// @brief Inicia a simlação, 
 void SHA::run() {
     if (!m_cronometro || !m_tela) {
         std::cerr << "ERRO FATAL: Falha na inicializacao dos componentes da aplicacao.\n";

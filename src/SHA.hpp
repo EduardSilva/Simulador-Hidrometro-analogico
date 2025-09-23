@@ -33,4 +33,4 @@ public:
     void run();
 };
 
-#endif // SHA_HPP
+#endif
