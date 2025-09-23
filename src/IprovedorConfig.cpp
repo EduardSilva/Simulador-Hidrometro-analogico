@@ -2,8 +2,9 @@
 #include <iostream>
 #include <map>
 #include <stdexcept>
+/// @brief namespace não nomeado, ou seja um monte de coisas que vão ficar presas apenas a esse arquivo, sendo invisiveis em qualquer lugar do projeto
 namespace {
-
+    /// @brief enumeração das entradas, deve estár de acordo com os dados de defs.hpp
     enum class campos  {
         VAZAO_ENTRADA,
         DIAMETRO_ENTRADA,
@@ -14,7 +15,10 @@ namespace {
         TEMPO,
         SCALE
     };
-
+    
+    /// @brief função que mapeia uma string para um dos campos da enumeração campos
+    /// @param s: string a ser mapeada
+    /// @return um dos itens do enum campos
     campos string_to_enum (const std::string & s){
         static const std::map<std::string, campos> string_to_campo{
         {"vazao_entrada", campos::VAZAO_ENTRADA},
@@ -65,7 +69,7 @@ void provedorConfigArquivo::montar_configuracoes(){
             nlinha++;
             continue; //skipa linha mal formada, mandando aviso
         }
-        try{
+        try{    //tenta verificar se a string possui informação sobre um dos campos
             switch (string_to_enum(linha.substr(0, equal_pos))){
                 case campos::VAZAO_ENTRADA:
                     this->configuracoes.vazao_entrada = std::stod(linha.substr(equal_pos+1));

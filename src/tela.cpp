@@ -20,13 +20,14 @@ Tela::Tela(unsigned int largura, unsigned int altura, const std::string& titulo,
     m_sprite = std::make_unique<sf::Sprite>(m_textura);
 }
 
+///@brief mantem a janela sendo renderizada enquanto não for fechada.
 void Tela::executar() {
     while (m_janela.isOpen()) {
         processarEventos();
         renderizar();
     }
 }
-
+/// @brief processa os eventos na janela, atualmente apenas verifica que ouve o evento closed
 void Tela::processarEventos() {
     while (const auto event = m_janela.pollEvent()) {
         if (event->is<sf::Event::Closed>()) {
@@ -34,7 +35,7 @@ void Tela::processarEventos() {
         }
     }
 }
-
+/// @brief atualiza a janela com a imagem do simulador
 void Tela::renderizar() {
     if (!m_mutex || !m_sprite) return;
 

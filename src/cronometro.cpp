@@ -7,7 +7,7 @@ cronometro::cronometro(Icomando* cmd, int intervalo_em_ms, double escala)
       ativo(false) // O cronômetro começa desligado.
 {}
 
-
+/// @brief para o cronometro -,)
 cronometro::~cronometro() {
     parar();
 }

@@ -26,6 +26,9 @@ const bool FONT_MAP[10][DIGITO_ALTURA][DIGITO_LARGURA] = {
     {{1,1,1,1,1},{1,0,0,0,1},{1,0,0,0,1},{1,1,1,1,1},{1,0,0,0,1},{1,0,0,0,1},{1,1,1,1,1}}, // 8
     {{1,1,1,1,1},{1,0,0,0,1},{1,0,0,0,1},{1,1,1,1,1},{0,0,0,0,1},{0,0,0,0,1},{1,1,1,1,1}}  // 9
 };
+/*
+    não adianta me perguntar nada sobre oque acontece entre as linhas 33 a linha 40, eu não faço ideia e não me importo!
+*/
 
 GeradorImagemPNG::GeradorImagemPNG(int largura_img, int altura_img) : largura(largura_img), altura(altura_img), buffer_pixels(largura_img * altura_img * canais) {}
 void GeradorImagemPNG::desenhar_pixel(int x, int y, Cor cor) { if (x < 0 || x >= largura || y < 0 || y >= altura) return; int index = (y * largura + x) * canais; buffer_pixels[index] = cor.r; buffer_pixels[index + 1] = cor.g; buffer_pixels[index + 2] = cor.b; }

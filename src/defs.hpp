@@ -1,8 +1,9 @@
 #ifndef DEFS_H
 #define DEFS_H
 
-// defs.hpp - VERSÃO CORRIGIDA COM VALORES PADRÃO
+// defs.hpp - definições que seram usadas entre arquivos.
 
+/// @brief tipos e dados do arquivo de configurações
 struct configuracoes_t {
     double vazao_entrada    = 0.0;
     double diametro_entrada = 0.075; 

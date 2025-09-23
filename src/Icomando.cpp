@@ -6,11 +6,16 @@
 void controladora::criar_simulador(const IprovedorConfig & prov){
     this->sim = fabrica::criar_simulador(prov);
 };
-
+/// @brief executa a função gerar_imagem, previamente atualizando os dados do simulador para tal
+/// @param sec segundos
+/// @param scale escala de tempo
 void controladora::executar(double sec, double scale) {
     this->sim->atualizar_info(sec, scale);
     this->gerar_imagem();
 }
+
+/// @brief função solta para imprimir dados num terminal
+/// @param sim simulador de hidrometro
 void imprimir_status(const simuladorHidrometro& sim) {
     std::cout << std::fixed << std::setprecision(4); // Formata para 4 casas decimais
     std::cout << "  Consumo Total Acumulado: " << sim.get_consumo_total_m3() << " m3\n";
