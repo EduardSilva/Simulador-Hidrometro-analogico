@@ -1,0 +1,1 @@
+Ferramenta para criação de diagrama foi o site mermaid, o diagrama se encontra na pasta diagrama, tanto em pdf, quanto em texto e até mesmo image.
