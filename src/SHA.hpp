@@ -12,7 +12,6 @@
 
 class SHA {
 private:
-    // A classe SHA é "dona" de todos os componentes principais.
     std::unique_ptr<IprovedorConfig> m_provedor;
     std::unique_ptr<GeradorImagemPNG> m_gerador_imagem;
     std::unique_ptr<controladora> m_controladora;
@@ -20,17 +19,26 @@ private:
     std::unique_ptr<Tela> m_tela;
     
     std::mutex m_mutex;
+    int m_id_instancia;
+    std::string m_nome_arquivo_imagem;
 
 public:
 
-    explicit SHA(const std::string& caminho_config);
+    explicit SHA(const std::string& caminho_config, int id_instancia = 1);
+    explicit SHA(const configuracoes_t& config, int id_instancia = 1);
     ~SHA();
 
-    // Proíbe cópias para garantir que só existe uma instância da aplicação.
     SHA(const SHA&) = delete;
     SHA& operator=(const SHA&) = delete;
 
     void run();
+    void iniciar();
+    void mostrar_interface();
+    void parar();
+    
+    void aumentar_vazao_entrada(double incremento = 0.1);
+    void diminuir_vazao_entrada(double decremento = 0.1);
+    double get_vazao_entrada() const;
 };
 
 #endif

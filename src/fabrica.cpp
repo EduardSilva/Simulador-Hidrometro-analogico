@@ -1,9 +1,9 @@
 #include "fabrica.hpp"
 
 
-/// @brief cria um simuçador
-/// @param prov recebe um provedor de configurações 
-/// @return o ponteiro para um simulador
+/// @brief Cria um simulador de hidrômetro
+/// @param prov Provedor de configurações 
+/// @return Ponteiro para um simulador
 simuladorHidrometro * fabrica::criar_simulador(const IprovedorConfig& prov){
     configuracoes_t conf = prov.enviar_configuracoes();
 

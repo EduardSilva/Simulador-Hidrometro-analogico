@@ -28,6 +28,13 @@ private:
 public:
     explicit GeradorImagemPNG(int largura_img, int altura_img);
     void gerar(const simuladorHidrometro& sim, const std::string& nome_arquivo);
+    void gerar_jpeg(const simuladorHidrometro& sim, const std::string& nome_arquivo, int qualidade = 90);
+    void gerar_buffer_apenas(const simuladorHidrometro& sim); // Gera apenas o buffer, sem salvar arquivo
+    
+    // Métodos para acesso ao buffer
+    const unsigned char* get_buffer_pixels() const { return buffer_pixels.data(); }
+    int get_largura() const { return largura; }
+    int get_altura() const { return altura; }
 };
 
 #endif // GERADOR_IMAGEM_PNG_HPP

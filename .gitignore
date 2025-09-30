@@ -1,5 +1,10 @@
 #gitignore para ignorar alguns arquivos que não precisam ir para o repositorio
 
+outputs/
 meu_programa
+Medições_202311250036/
+simulador_hidrometro
+*.o
 tudo.cpp
 imagem.png
+temp/

@@ -2,40 +2,48 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "type": "cppbuild",
-            "label": "C/C++: g++ build project",
-            "command": "/usr/bin/g++",
+            "type": "shell",
+            "label": "Build Project with Makefile",
+            "command": "make",
             "args": [
-                "-fdiagnostics-color=always",
-                "-g",
-                "-std=c++17", // <--- VERSÃO DO C++ EXPLICITADA AQUI
-                "${workspaceFolder}/main.cpp",
-                "${workspaceFolder}/src/IprovedorConfig.cpp",
-                "${workspaceFolder}/src/tubo.cpp",
-                "${workspaceFolder}/src/tela.cpp",
-                "${workspaceFolder}/src/Icomando.cpp",
-                "${workspaceFolder}/src/fabrica.cpp",
-                "${workspaceFolder}/src/GeradorImagemPNG.cpp",
-                "${workspaceFolder}/src/cronometro.cpp",
-                "${workspaceFolder}/src/SHA.cpp",
-                "${workspaceFolder}/src/simuladorHidrometro.cpp",
-                "-o",
-                "${workspaceFolder}/meu_programa",
-                "-lsfml-graphics",
-                "-lsfml-window",
-                "-lsfml-system"
+                "all"
             ],
             "options": {
                 "cwd": "${workspaceFolder}"
             },
-            "problemMatcher": [
-                "$gcc"
-            ],
+            "problemMatcher": [],
             "group": {
                 "kind": "build",
                 "isDefault": true
             },
-            "detail": "Compiles the entire project for debugging using C++20 standard."
+            "detail": "Compiles the entire project using Makefile with organized directory structure."
+        },
+        {
+            "type": "shell",
+            "label": "Clean and Build Project",
+            "command": "make",
+            "args": [
+                "rebuild"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": [],
+            "group": "build",
+            "detail": "Cleans and recompiles the entire project using Makefile."
+        },
+        {
+            "type": "shell",
+            "label": "Run Project",
+            "command": "make",
+            "args": [
+                "run"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "group": "test",
+            "detail": "Compiles and runs the project."
         }
     ]
 }

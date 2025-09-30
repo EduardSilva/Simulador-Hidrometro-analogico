@@ -24,6 +24,11 @@ public:
     int get_consumo_dezena_litro() const;
     int get_consumo_litro() const;
     double get_real_consumo() const;
+    
+    // Controle dinâmico de vazão
+    void aumentar_vazao_entrada(double incremento = 0.1);
+    void diminuir_vazao_entrada(double decremento = 0.1);
+    double get_vazao_entrada() const;
 };
 
 

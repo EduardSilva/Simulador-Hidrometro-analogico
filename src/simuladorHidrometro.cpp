@@ -15,33 +15,26 @@ simuladorHidrometro::~simuladorHidrometro(){
     delete this->tubo_saida;
 }
 
-/// @brief calcula menor consumo entre os tubos de entrada e saida
-/// @return um double com o menor consumo entre os tubos.
+/// @brief Calcula menor consumo entre os tubos de entrada e saída
+/// @return Menor consumo entre os tubos em dezenas de litros
 double simuladorHidrometro::get_real_consumo() const {
     return std::min(this->tubo_entrada->consumo_em_dlitros(), this->tubo_saida->consumo_em_dlitros()); 
 }
 
-
-/**
- * @brief Atualiza o estado do hidrômetro com base no tempo passado.
- * @param sec O tempo base em segundos que passou desde a última chamada.
- * @param scale Um fator de escala para acelerar/desacelerar a simulação.
- */
+/// @brief Atualiza o estado do hidrômetro com base no tempo passado
+/// @param sec Tempo base em segundos desde a última atualização
+/// @param scale Fator de escala para acelerar/desacelerar a simulação
 void simuladorHidrometro::atualizar_info(double sec, double scale) {
-
     double tempo_efetivo_segundos = sec * scale;
-
     double taxa_consumo_dezenas_litros_por_s = this->get_real_consumo();
-
     double consumo_neste_tick_dezenas_litros = taxa_consumo_dezenas_litros_por_s * tempo_efetivo_segundos;
-
     double consumo_neste_tick_m3 = consumo_neste_tick_dezenas_litros / 100.0;
+    
     this->consumo_m3 += consumo_neste_tick_m3;
 
     long long total_litros = static_cast<long long>(std::floor(this->consumo_m3 * 1000.0));
 
     this->consumo_dezena_l = (total_litros / 10) % 10;
-
     this->consumo_centena_l = (total_litros / 100) % 10;
     this->consumo_litro = total_litros  % 10;
 }
@@ -60,4 +53,24 @@ int simuladorHidrometro::get_consumo_dezena_litro() const {
 
 int simuladorHidrometro::get_consumo_centena_litro() const {
     return this->consumo_centena_l;
+}
+
+// Controle dinâmico de vazão
+void simuladorHidrometro::aumentar_vazao_entrada(double incremento) {
+    if (this->tubo_entrada) {
+        this->tubo_entrada->aumentar_vazao_agua(incremento);
+    }
+}
+
+void simuladorHidrometro::diminuir_vazao_entrada(double decremento) {
+    if (this->tubo_entrada) {
+        this->tubo_entrada->diminuir_vazao_agua(decremento);
+    }
+}
+
+double simuladorHidrometro::get_vazao_entrada() const {
+    if (this->tubo_entrada) {
+        return this->tubo_entrada->get_vazao_agua();
+    }
+    return 0.0;
 }

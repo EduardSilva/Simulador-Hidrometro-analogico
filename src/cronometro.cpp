@@ -7,13 +7,14 @@ cronometro::cronometro(Icomando* cmd, int intervalo_em_ms, double escala)
       ativo(false) // O cronômetro começa desligado.
 {}
 
-/// @brief para o cronometro -,)
+/// @brief Para o cronômetro
 cronometro::~cronometro() {
     parar();
 }
-/// @brief inicia o funcionamento do cronometro
+
+/// @brief Inicia o funcionamento do cronômetro
 void cronometro::iniciar() {
-    if (ativo) return; // Se já estiver ativo, não faz nada.
+    if (ativo) return;
 
     ativo = true;
     worker_thread = std::thread(&cronometro::loop, this);
@@ -27,19 +28,14 @@ void cronometro::parar() {
     }
 }
 
-/// @brief função responsável por executar o Icomando de x em x ficando em sleep durante o periodo inativo
+/// @brief Loop principal do cronômetro
 void cronometro::loop() {
-
     double intervalo_sec = static_cast<double>(intervalo_ms) / 1000.0;
 
-
     while (this->ativo) {
-
         if (this->cmd) {
-
             cmd->executar(intervalo_sec, scala_simulador);
         }
-
 
         std::this_thread::sleep_for(std::chrono::milliseconds(intervalo_ms));
     }

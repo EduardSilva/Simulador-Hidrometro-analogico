@@ -1,0 +1,64 @@
+{
+  "instancias": [
+    {
+      "id": 1,
+      "nome": "Hidrometro_Principal",
+      "vazao_entrada": 2.0,
+      "diametro_entrada": 0.075,
+      "ar_entrada": 1.5,
+      "vazao_saida": 2.0,
+      "diametro_saida": 0.075,
+      "ar_saida": 0.0,
+      "tempo": 1000,
+      "scale": 10
+    },
+    {
+      "id": 2,
+      "nome": "Hidrometro_Secundario",
+      "vazao_entrada": 1.8,
+      "diametro_entrada": 0.065,
+      "ar_entrada": 1.2,
+      "vazao_saida": 1.8,
+      "diametro_saida": 0.065,
+      "ar_saida": 0.0,
+      "tempo": 1200,
+      "scale": 8
+    },
+    {
+      "id": 3,
+      "nome": "Hidrometro_Teste_A",
+      "vazao_entrada": 2.5,
+      "diametro_entrada": 0.080,
+      "ar_entrada": 2.0,
+      "vazao_saida": 2.5,
+      "diametro_saida": 0.080,
+      "ar_saida": 0.0,
+      "tempo": 800,
+      "scale": 12
+    },
+    {
+      "id": 4,
+      "nome": "Hidrometro_Teste_B",
+      "vazao_entrada": 1.5,
+      "diametro_entrada": 0.070,
+      "ar_entrada": 1.0,
+      "vazao_saida": 1.5,
+      "diametro_saida": 0.070,
+      "ar_saida": 0.0,
+      "tempo": 1500,
+      "scale": 6
+    },
+    {
+      "id": 5,
+      "nome": "Hidrometro_Calibracao",
+      "vazao_entrada": 3.0,
+      "diametro_entrada": 0.090,
+      "ar_entrada": 2.5,
+      "vazao_saida": 3.0,
+      "diametro_saida": 0.090,
+      "ar_saida": 0.0,
+      "tempo": 600,
+      "scale": 15
+    }
+  ]
+}

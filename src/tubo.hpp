@@ -22,6 +22,12 @@ class tubo {
 
         double consumo_em_dlitros() const;
 
+        // Métodos para controle dinâmico de vazão
+        void aumentar_vazao_agua(double incremento);
+        void diminuir_vazao_agua(double decremento);
+        double get_vazao_agua() const;
+        void set_vazao_agua(double nova_vazao);
+
 };
 
 #endif
